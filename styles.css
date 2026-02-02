@@ -1,0 +1,44 @@
+/* Base styling */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #0d0d0d;
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+#home-screen, #session-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#week-tracker span {
+    margin: 0 5px;
+}
+
+#motivational-quote {
+    font-size: 1.2em;
+    margin: 20px 0;
+}
+
+#start-session, #pause-session {
+    padding: 10px 20px;
+    font-size: 1.5em;
+    cursor: pointer;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+#settings {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: pointer;
+}

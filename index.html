@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heart Breath Mind Resonance</title>
+<link rel="stylesheet" href="styles.css">
+<script defer src="app.js"></script>
+</head>
+<body>
+<!-- Home Screen -->
+<div id="home-screen">
+    <div id="week-tracker">
+        <span>S</span>
+        <!-- Other days will be dynamically added -->
+    </div>
+    <p id="motivational-quote">Start your journey towards peacefulness!</p>
+    <button id="start-session">START</button>
+    <div id="settings">
+        <!-- Settings icon -->
+    </div>
+</div>
+<!-- Session Screen -->
+<div id="session-screen" style="display:none;">
+    <div id="breath-pattern">4s inhale / 6s exhale</div>
+    <canvas id="breathing-circle"></canvas>
+    <button id="pause-session">PAUSE</button>
+    <div id="timer">00:00:00</div>
+</div>
+</body>
+</html>
