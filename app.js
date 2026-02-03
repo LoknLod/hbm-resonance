@@ -28,34 +28,54 @@ let audioContext = null;
 let oscillator = null;
 let gainNode = null;
 
-function initAudio() {
+async function initAudio() {
     if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        gainNode = audioContext.createGain();
-        gainNode.connect(audioContext.destination);
-        gainNode.gain.value = 0.15; // Gentle volume
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.value = 0.2; // Increased volume slightly
+            console.log('AudioContext created, state:', audioContext.state);
+        } catch (err) {
+            console.error('Failed to create AudioContext:', err);
+            return;
+        }
     }
     
-    // Resume audio context (required by browsers for autoplay policy)
-    if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-            console.log('Audio context resumed');
-        }).catch(err => {
+    // Force resume audio context (required by browsers for autoplay policy)
+    if (audioContext.state !== 'running') {
+        try {
+            await audioContext.resume();
+            console.log('AudioContext resumed, state:', audioContext.state);
+        } catch (err) {
             console.error('Failed to resume audio context:', err);
-        });
+        }
     }
 }
 
-function startBreathTone() {
-    if (!state.settings.sound || !audioContext) return;
+async function startBreathTone() {
+    if (!state.settings.sound) return;
+    
+    // Ensure audio is initialized and running
+    await initAudio();
+    
+    if (!audioContext || audioContext.state !== 'running') {
+        console.error('AudioContext not ready, state:', audioContext?.state);
+        return;
+    }
     
     stopBreathTone();
     
-    oscillator = audioContext.createOscillator();
-    oscillator.type = 'sine'; // Smooth, calming tone
-    oscillator.frequency.value = 200; // Starting frequency
-    oscillator.connect(gainNode);
-    oscillator.start();
+    try {
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine'; // Smooth, calming tone
+        oscillator.frequency.value = 200; // Starting frequency
+        oscillator.connect(gainNode);
+        oscillator.start(0);
+        console.log('Breath tone started');
+    } catch (err) {
+        console.error('Failed to start oscillator:', err);
+    }
 }
 
 function updateBreathTone(phase, progress) {
@@ -269,7 +289,7 @@ let breathPhase = 'inhale';
 let phaseTimer = 0;
 let phaseStartTime = 0;
 
-function startSession() {
+async function startSession() {
     if (state.sessionState === 'running') return;
     
     state.sessionState = 'running';
@@ -279,10 +299,10 @@ function startSession() {
     phaseTimer = 0;
     phaseStartTime = Date.now();
     
-    // Initialize and start audio
-    initAudio();
+    // Initialize and start audio (await to ensure it's ready)
     if (state.settings.sound) {
-        startBreathTone();
+        await initAudio();
+        await startBreathTone();
     }
     
     // Start timer
@@ -296,7 +316,7 @@ function startSession() {
     updateUI();
 }
 
-function pauseSession() {
+async function pauseSession() {
     if (state.sessionState === 'running') {
         state.sessionState = 'paused';
         clearInterval(sessionInterval);
@@ -306,7 +326,7 @@ function pauseSession() {
         state.sessionState = 'running';
         phaseStartTime = Date.now();
         if (state.settings.sound) {
-            startBreathTone();
+            await startBreathTone();
         }
         sessionInterval = setInterval(() => {
             state.sessionTimer++;
