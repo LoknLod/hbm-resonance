@@ -35,6 +35,15 @@ function initAudio() {
         gainNode.connect(audioContext.destination);
         gainNode.gain.value = 0.15; // Gentle volume
     }
+    
+    // Resume audio context (required by browsers for autoplay policy)
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log('Audio context resumed');
+        }).catch(err => {
+            console.error('Failed to resume audio context:', err);
+        });
+    }
 }
 
 function startBreathTone() {
@@ -407,6 +416,34 @@ function updatePhaseDisplay() {
         };
         phaseLabel.textContent = labels[breathPhase] || 'Breathe';
     }
+    
+    // Update breath pattern display
+    const { inhale, exhale, inhaleHold, exhaleHold } = state.breathPattern;
+    const inhaleTime = document.getElementById('inhale-time');
+    const exhaleTime = document.getElementById('exhale-time');
+    const holdInTime = document.getElementById('hold-in-time');
+    const holdOutTime = document.getElementById('hold-out-time');
+    const holdInSegment = document.getElementById('hold-in-segment');
+    const holdOutSegment = document.getElementById('hold-out-segment');
+    
+    if (inhaleTime) inhaleTime.textContent = `${inhale.toFixed(1)}s`;
+    if (exhaleTime) exhaleTime.textContent = `${exhale.toFixed(1)}s`;
+    
+    if (inhaleHold > 0) {
+        if (holdInTime) holdInTime.textContent = `${inhaleHold.toFixed(1)}s`;
+        if (holdInSegment) holdInSegment.style.display = 'block';
+    } else {
+        if (holdInSegment) holdInSegment.style.display = 'none';
+    }
+    
+    if (exhaleHold > 0) {
+        if (holdOutTime) holdOutTime.textContent = `${exhaleHold.toFixed(1)}s`;
+        if (holdOutSegment) holdOutSegment.style.display = 'block';
+    } else {
+        if (holdOutSegment) holdOutSegment.style.display = 'none';
+    }
+    
+    console.log(`Phase: ${breathPhase}, Pattern: ${inhale}/${exhale}/${inhaleHold}/${exhaleHold}`);
 }
 
 // ====== 10-WEEK PROTOCOL ======
@@ -590,6 +627,83 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // Settings screen controls
+    const settingsBack = document.getElementById('settings-back');
+    const settingsBtn = document.getElementById('settings-btn');
+    
+    if (settingsBack) settingsBack.addEventListener('click', () => showScreen('home'));
+    if (settingsBtn) settingsBtn.addEventListener('click', () => showScreen('settings'));
+    
+    // Breath pattern sliders
+    setupBreathPatternControls();
+    
+    // Sound toggle in settings
+    const soundToggle = document.getElementById('sound-toggle');
+    if (soundToggle) {
+        soundToggle.classList.toggle('active', state.settings.sound);
+        soundToggle.addEventListener('click', () => {
+            state.settings.sound = !state.settings.sound;
+            soundToggle.classList.toggle('active', state.settings.sound);
+            saveState();
+        });
+    }
+}
+
+function setupBreathPatternControls() {
+    const inhaleSlider = document.getElementById('inhale-slider');
+    const exhaleSlider = document.getElementById('exhale-slider');
+    const holdInSlider = document.getElementById('hold-in-slider');
+    const holdOutSlider = document.getElementById('hold-out-slider');
+    
+    const inhaleValue = document.getElementById('inhale-value');
+    const exhaleValue = document.getElementById('exhale-value');
+    const holdInValue = document.getElementById('hold-in-value');
+    const holdOutValue = document.getElementById('hold-out-value');
+    const patternPreview = document.getElementById('pattern-preview');
+    
+    function updateBreathPattern() {
+        state.breathPattern.inhale = parseFloat(inhaleSlider.value);
+        state.breathPattern.exhale = parseFloat(exhaleSlider.value);
+        state.breathPattern.inhaleHold = parseFloat(holdInSlider.value);
+        state.breathPattern.exhaleHold = parseFloat(holdOutSlider.value);
+        
+        if (inhaleValue) inhaleValue.textContent = `${state.breathPattern.inhale.toFixed(1)}s`;
+        if (exhaleValue) exhaleValue.textContent = `${state.breathPattern.exhale.toFixed(1)}s`;
+        if (holdInValue) holdInValue.textContent = `${state.breathPattern.inhaleHold.toFixed(1)}s`;
+        if (holdOutValue) holdOutValue.textContent = `${state.breathPattern.exhaleHold.toFixed(1)}s`;
+        
+        // Calculate breaths per minute
+        const totalCycle = state.breathPattern.inhale + state.breathPattern.exhale + 
+                          state.breathPattern.inhaleHold + state.breathPattern.exhaleHold;
+        const breathsPerMin = 60 / totalCycle;
+        
+        if (patternPreview) {
+            patternPreview.textContent = `${state.breathPattern.inhale}s in / ${state.breathPattern.exhale}s out = ${breathsPerMin.toFixed(1)} breaths/min`;
+        }
+        
+        saveState();
+    }
+    
+    if (inhaleSlider) {
+        inhaleSlider.value = state.breathPattern.inhale;
+        inhaleSlider.addEventListener('input', updateBreathPattern);
+    }
+    if (exhaleSlider) {
+        exhaleSlider.value = state.breathPattern.exhale;
+        exhaleSlider.addEventListener('input', updateBreathPattern);
+    }
+    if (holdInSlider) {
+        holdInSlider.value = state.breathPattern.inhaleHold;
+        holdInSlider.addEventListener('input', updateBreathPattern);
+    }
+    if (holdOutSlider) {
+        holdOutSlider.value = state.breathPattern.exhaleHold;
+        holdOutSlider.addEventListener('input', updateBreathPattern);
+    }
+    
+    // Initialize display
+    updateBreathPattern();
 }
 
 // ====== OURA HRV INTEGRATION ======
