@@ -5,6 +5,7 @@ const state = {
     breathPattern: { inhale: 4, exhale: 6, inhaleHold: 0, exhaleHold: 0 },
     currentWeek: 1,
     sessionTimer: 0,
+    sessionDuration: 600, // 10 minutes default
     breathCount: 0,
     history: [],
     streak: 0,
@@ -22,22 +23,6 @@ const screens = {
     settings: document.getElementById('settings-screen')
 };
 
-const elements = {
-    breathingCircle: document.querySelector('.breathing-circle'),
-    timerDisplay: document.getElementById('timer-display'),
-    breathCounter: document.getElementById('breath-count'),
-    weekDisplay: document.getElementById('week-display'),
-    streakDisplay: document.getElementById('streak-display'),
-    calibrationRate: document.getElementById('calibration-rate'),
-    startBtn: document.getElementById('start-btn'),
-    pauseBtn: document.getElementById('pause-btn'),
-    endBtn: document.getElementById('end-btn'),
-    inhaleInput: document.getElementById('inhale'),
-    exhaleInput: document.getElementById('exhale'),
-    inhaleHoldInput: document.getElementById('inhale-hold'),
-    exhaleHoldInput: document.getElementById('exhale-hold')
-};
-
 // ====== INITIALIZATION ======
 function init() {
     loadState();
@@ -46,7 +31,7 @@ function init() {
     updateUI();
     setupServiceWorker();
     
-    // Skip straight to home screen (bypass splash and onboarding for now)
+    // Skip straight to home screen
     setTimeout(() => {
         const splash = document.getElementById('splash-screen');
         const onboarding = document.getElementById('onboarding-screen');
@@ -91,24 +76,29 @@ function saveState() {
 }
 
 function loadState() {
-    const saved = JSON.parse(localStorage.getItem('hbmState') || '{}');
-    Object.assign(state, {
-        history: saved.history || [],
-        streak: saved.streak || 0,
-        lastSessionDate: saved.lastSessionDate ? new Date(saved.lastSessionDate) : null,
-        calibration: saved.calibration || { rate: 6, complete: false },
-        settings: saved.settings || { vibration: true, sound: false, darkMode: false },
-        currentWeek: saved.currentWeek || 1,
-        breathPattern: saved.breathPattern || { inhale: 4, exhale: 6, inhaleHold: 0, exhaleHold: 0 }
-    });
-    updateStreak();
+    try {
+        const saved = JSON.parse(localStorage.getItem('hbmState') || '{}');
+        Object.assign(state, {
+            history: saved.history || [],
+            streak: saved.streak || 0,
+            lastSessionDate: saved.lastSessionDate ? new Date(saved.lastSessionDate) : null,
+            calibration: saved.calibration || { rate: 6, complete: false },
+            settings: saved.settings || { vibration: true, sound: false, darkMode: false },
+            currentWeek: saved.currentWeek || 1,
+            breathPattern: saved.breathPattern || { inhale: 4, exhale: 6, inhaleHold: 0, exhaleHold: 0 }
+        });
+        updateStreak();
+    } catch (e) {
+        console.error('Error loading state:', e);
+    }
 }
 
 // ====== NAVIGATION ======
 function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            showScreen(btn.dataset.target);
+            const target = btn.getAttribute('data-screen');
+            if (target) showScreen(target);
         });
     });
     
@@ -126,28 +116,29 @@ function setupOnboarding() {
     function goToSlide(index) {
         slides.forEach(s => s.classList.remove('active'));
         dots.forEach(d => d.classList.remove('active'));
-        slides[index].classList.add('active');
-        dots[index].classList.add('active');
+        if (slides[index]) slides[index].classList.add('active');
+        if (dots[index]) dots[index].classList.add('active');
         currentSlide = index;
     }
     
-    // Skip button
     if (skipBtn) {
         skipBtn.addEventListener('click', () => {
-            document.getElementById('onboarding-screen').classList.remove('active');
-            document.getElementById('home-screen').classList.add('active');
+            const onboarding = document.getElementById('onboarding-screen');
+            const home = document.getElementById('home-screen');
+            if (onboarding) onboarding.classList.remove('active');
+            if (home) home.classList.add('active');
         });
     }
     
-    // Start button (on last slide)
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            document.getElementById('onboarding-screen').classList.remove('active');
-            document.getElementById('home-screen').classList.add('active');
+            const onboarding = document.getElementById('onboarding-screen');
+            const home = document.getElementById('home-screen');
+            if (onboarding) onboarding.classList.remove('active');
+            if (home) home.classList.add('active');
         });
     }
     
-    // Dot navigation
     dots.forEach((dot, index) => {
         dot.addEventListener('click', () => goToSlide(index));
     });
@@ -164,12 +155,10 @@ function setupOnboarding() {
             const touchEndX = e.changedTouches[0].clientX;
             const diff = touchStartX - touchEndX;
             
-            if (Math.abs(diff) > 50) { // Minimum swipe distance
+            if (Math.abs(diff) > 50) {
                 if (diff > 0 && currentSlide < slides.length - 1) {
-                    // Swipe left - next slide
                     goToSlide(currentSlide + 1);
                 } else if (diff < 0 && currentSlide > 0) {
-                    // Swipe right - previous slide
                     goToSlide(currentSlide - 1);
                 }
             }
@@ -178,9 +167,21 @@ function setupOnboarding() {
 }
 
 function showScreen(screenName) {
-    Object.values(screens).forEach(screen => screen.classList.add('hidden'));
-    screens[screenName].classList.remove('hidden');
-    state.currentScreen = screenName;
+    // Remove active from all screens
+    Object.values(screens).forEach(screen => {
+        if (screen) {
+            screen.classList.remove('active');
+            screen.style.display = 'none';
+        }
+    });
+    
+    // Activate the target screen
+    if (screens[screenName]) {
+        screens[screenName].classList.add('active');
+        screens[screenName].style.display = 'block';
+        state.currentScreen = screenName;
+    }
+    
     updateUI();
 }
 
@@ -189,7 +190,7 @@ let animationFrame;
 let sessionInterval;
 let breathPhase = 'inhale';
 let phaseTimer = 0;
-let circleScale = 1;
+let phaseStartTime = 0;
 
 function startSession() {
     if (state.sessionState === 'running') return;
@@ -199,33 +200,43 @@ function startSession() {
     state.breathCount = 0;
     breathPhase = 'inhale';
     phaseTimer = 0;
+    phaseStartTime = Date.now();
     
-    // Start timers
+    // Start timer
     sessionInterval = setInterval(() => {
         state.sessionTimer++;
         updateTimerDisplay();
     }, 1000);
     
-    // Start animation loop
-    animateBreathing();
+    // Start animation
+    requestAnimationFrame(animateBreathing);
     updateUI();
 }
 
 function pauseSession() {
-    state.sessionState = 'paused';
-    clearInterval(sessionInterval);
-    cancelAnimationFrame(animationFrame);
-    updateUI();
+    if (state.sessionState === 'running') {
+        state.sessionState = 'paused';
+        clearInterval(sessionInterval);
+        updateUI();
+    } else if (state.sessionState === 'paused') {
+        state.sessionState = 'running';
+        phaseStartTime = Date.now();
+        sessionInterval = setInterval(() => {
+            state.sessionTimer++;
+            updateTimerDisplay();
+        }, 1000);
+        requestAnimationFrame(animateBreathing);
+        updateUI();
+    }
 }
 
 function endSession() {
     state.sessionState = 'idle';
     clearInterval(sessionInterval);
-    cancelAnimationFrame(animationFrame);
     
     // Record session
     const sessionData = {
-        date: new Date(),
+        date: new Date().toISOString(),
         duration: state.sessionTimer,
         breaths: state.breathCount,
         week: state.currentWeek
@@ -241,53 +252,79 @@ function animateBreathing() {
     if (state.sessionState !== 'running') return;
     
     const now = Date.now();
-    const elapsed = now - (animationFrame || now);
-    animationFrame = now;
-    
-    phaseTimer += elapsed / 1000; // Convert to seconds
+    const elapsed = (now - phaseStartTime) / 1000; // seconds
     
     const { inhale, exhale, inhaleHold, exhaleHold } = state.breathPattern;
     const phaseDurations = {
-        inhale: inhale,
-        inhaleHold: inhaleHold,
-        exhale: exhale,
-        exhaleHold: exhaleHold
+        'inhale': inhale,
+        'inhaleHold': inhaleHold,
+        'exhale': exhale,
+        'exhaleHold': exhaleHold
     };
     
-    // Check for phase completion
-    if (phaseTimer >= phaseDurations[breathPhase]) {
-        phaseTimer = 0;
+    // Check if phase is complete
+    if (elapsed >= phaseDurations[breathPhase]) {
+        phaseStartTime = now;
+        
+        // Move to next phase
         switch (breathPhase) {
-            case 'inhale': breathPhase = 'inhaleHold'; break;
-            case 'inhaleHold': breathPhase = 'exhale'; break;
-            case 'exhale': breathPhase = 'exhaleHold'; break;
-            case 'exhaleHold': 
+            case 'inhale':
+                breathPhase = inhaleHold > 0 ? 'inhaleHold' : 'exhale';
+                break;
+            case 'inhaleHold':
+                breathPhase = 'exhale';
+                break;
+            case 'exhale':
+                breathPhase = exhaleHold > 0 ? 'exhaleHold' : 'inhale';
+                break;
+            case 'exhaleHold':
                 breathPhase = 'inhale';
                 state.breathCount++;
-                elements.breathCounter.textContent = state.breathCount;
                 break;
         }
+        
+        updatePhaseDisplay();
     }
     
-    // Calculate circle scale
-    const progress = phaseTimer / phaseDurations[breathPhase];
+    // Calculate scale based on phase
+    const progress = elapsed / phaseDurations[breathPhase];
+    let scale = 1;
+    
     switch (breathPhase) {
         case 'inhale':
-            circleScale = 1 + progress * 0.5; // Scale up during inhale
+            scale = 1 + (progress * 0.5); // 1.0 -> 1.5
+            break;
+        case 'inhaleHold':
+            scale = 1.5;
             break;
         case 'exhale':
-            circleScale = 1.5 - progress * 0.5; // Scale down during exhale
+            scale = 1.5 - (progress * 0.5); // 1.5 -> 1.0
             break;
-        default:
-            // Maintain scale during holds
-            circleScale = breathPhase === 'inhaleHold' ? 1.5 : 1;
+        case 'exhaleHold':
+            scale = 1;
+            break;
     }
     
     // Apply animation
-    elements.breathingCircle.style.transform = `scale(${circleScale})`;
+    const circle = document.getElementById('breathing-circle');
+    if (circle) {
+        circle.style.transform = `scale(${scale})`;
+    }
     
-    // Continue animation loop
     requestAnimationFrame(animateBreathing);
+}
+
+function updatePhaseDisplay() {
+    const phaseLabel = document.getElementById('breath-phase');
+    if (phaseLabel) {
+        const labels = {
+            'inhale': 'Breathe In',
+            'inhaleHold': 'Hold',
+            'exhale': 'Breathe Out',
+            'exhaleHold': 'Hold'
+        };
+        phaseLabel.textContent = labels[breathPhase] || 'Breathe';
+    }
 }
 
 // ====== 10-WEEK PROTOCOL ======
@@ -305,17 +342,16 @@ const protocol = {
 };
 
 function setWeek(week) {
-    if (week < 1 || week > 10) return;
-    state.currentWeek = week;
-    state.breathPattern = {...protocol[week]};
-    saveState();
-    updateUI();
+    if (week >= 1 && week <= 10) {
+        state.currentWeek = week;
+        state.breathPattern = protocol[week];
+        saveState();
+        updateUI();
+    }
 }
 
 function nextWeek() {
-    if (state.currentWeek < 10) {
-        setWeek(state.currentWeek + 1);
-    }
+    setWeek(state.currentWeek + 1);
 }
 
 // ====== CALIBRATION ======
@@ -324,12 +360,10 @@ function startCalibration() {
     state.breathPattern = { inhale: 3, exhale: 3, inhaleHold: 0, exhaleHold: 0 };
     startSession();
     
-    // After 1 minute, calculate breathing rate
     setTimeout(() => {
         const breathsPerMinute = state.breathCount;
         endSession();
         
-        // Set optimal rate (5-7 bpm)
         state.calibration.rate = Math.min(7, Math.max(5, breathsPerMinute));
         state.calibration.complete = true;
         state.breathPattern = originalPattern;
@@ -342,104 +376,115 @@ function startCalibration() {
 function updateUI() {
     // Update navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.target === state.currentScreen);
+        const target = btn.getAttribute('data-screen');
+        btn.classList.toggle('active', target === state.currentScreen);
     });
     
+    // Update streak display
+    const streakCount = document.querySelector('.streak-count');
+    if (streakCount) streakCount.textContent = state.streak;
+    
+    // Update week display
+    const weekNumber = document.querySelector('.week-number');
+    const weekFocus = document.querySelector('.week-focus');
+    if (weekNumber) weekNumber.textContent = `Week ${state.currentWeek}`;
+    
+    const weekLabels = {
+        1: 'Foundation', 2: 'Building', 3: 'Deepening', 4: 'Expanding',
+        5: 'Refinement', 6: 'Integration', 7: 'Strength', 8: 'Mastery',
+        9: 'Application', 10: 'Autonomy'
+    };
+    if (weekFocus) weekFocus.textContent = weekLabels[state.currentWeek] || 'Practice';
+    
     // Update session controls
-    elements.startBtn.disabled = state.sessionState === 'running';
-    elements.pauseBtn.disabled = state.sessionState !== 'running';
-    elements.endBtn.disabled = state.sessionState === 'idle';
-    
-    // Update displays
-    elements.weekDisplay.textContent = state.currentWeek;
-    elements.streakDisplay.textContent = state.streak;
-    elements.calibrationRate.textContent = state.calibration.rate;
-    
-    // Update settings inputs
-    elements.inhaleInput.value = state.breathPattern.inhale;
-    elements.exhaleInput.value = state.breathPattern.exhale;
-    elements.inhaleHoldInput.value = state.breathPattern.inhaleHold;
-    elements.exhaleHoldInput.value = state.breathPattern.exhaleHold;
+    const pauseBtn = document.getElementById('session-pause');
+    if (pauseBtn) {
+        const pauseIcon = pauseBtn.querySelector('.pause-icon');
+        const playIcon = pauseBtn.querySelector('.play-icon');
+        
+        if (state.sessionState === 'paused') {
+            if (pauseIcon) pauseIcon.style.display = 'none';
+            if (playIcon) playIcon.style.display = 'block';
+        } else {
+            if (pauseIcon) pauseIcon.style.display = 'block';
+            if (playIcon) playIcon.style.display = 'none';
+        }
+    }
     
     // Apply dark mode
     document.body.classList.toggle('dark-mode', state.settings.darkMode);
 }
 
 function updateTimerDisplay() {
-    const minutes = Math.floor(state.sessionTimer / 60);
-    const seconds = state.sessionTimer % 60;
-    elements.timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    const elapsed = document.getElementById('session-elapsed');
+    if (elapsed) {
+        const minutes = Math.floor(state.sessionTimer / 60);
+        const seconds = state.sessionTimer % 60;
+        elapsed.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
 }
 
 function updateStreak() {
     const today = new Date().toDateString();
-    const lastSessionDay = state.lastSessionDate?.toDateString();
+    const lastSessionDay = state.lastSessionDate ? new Date(state.lastSessionDate).toDateString() : null;
     
-    if (lastSessionDay === today) return; // Already counted today
+    if (lastSessionDay === today) return;
     
     if (state.lastSessionDate) {
         const oneDay = 24 * 60 * 60 * 1000;
-        const daysSince = Math.round(Math.abs((new Date() - state.lastSessionDate) / oneDay));
+        const lastDate = new Date(state.lastSessionDate);
+        const daysSince = Math.round(Math.abs((new Date() - lastDate) / oneDay));
         
         if (daysSince === 1) {
             state.streak++;
         } else if (daysSince > 1) {
-            state.streak = 1; // Reset streak
+            state.streak = 1;
         }
     } else {
         state.streak = 1;
     }
     
-    state.lastSessionDate = new Date();
-    saveState();
+    state.lastSessionDate = new Date().toISOString();
 }
 
 // ====== EVENT LISTENERS ======
 function setupEventListeners() {
+    // Home screen session buttons
+    const quickBtn = document.getElementById('quick-session');
+    const fullBtn = document.getElementById('full-session');
+    const calibBtn = document.getElementById('calibration-session');
+    
+    if (quickBtn) {
+        quickBtn.addEventListener('click', () => {
+            state.sessionDuration = 5 * 60;
+            showScreen('session');
+            setTimeout(() => startSession(), 100);
+        });
+    }
+    
+    if (fullBtn) {
+        fullBtn.addEventListener('click', () => {
+            state.sessionDuration = 10 * 60;
+            showScreen('session');
+            setTimeout(() => startSession(), 100);
+        });
+    }
+    
+    if (calibBtn) {
+        calibBtn.addEventListener('click', () => {
+            showScreen('session');
+            setTimeout(() => startCalibration(), 100);
+        });
+    }
+    
     // Session controls
-    elements.startBtn.addEventListener('click', startSession);
-    elements.pauseBtn.addEventListener('click', pauseSession);
-    elements.endBtn.addEventListener('click', endSession);
+    const pauseBtn = document.getElementById('session-pause');
+    const endBtn = document.getElementById('session-end');
+    const backBtn = document.getElementById('session-back');
     
-    // Calibration
-    document.getElementById('calibrate-btn').addEventListener('click', startCalibration);
-    
-    // Week navigation
-    document.getElementById('prev-week').addEventListener('click', () => setWeek(state.currentWeek - 1));
-    document.getElementById('next-week').addEventListener('click', nextWeek);
-    
-    // Settings changes
-    elements.inhaleInput.addEventListener('change', (e) => {
-        state.breathPattern.inhale = parseInt(e.target.value);
-        saveState();
-    });
-    elements.exhaleInput.addEventListener('change', (e) => {
-        state.breathPattern.exhale = parseInt(e.target.value);
-        saveState();
-    });
-    elements.inhaleHoldInput.addEventListener('change', (e) => {
-        state.breathPattern.inhaleHold = parseInt(e.target.value);
-        saveState();
-    });
-    elements.exhaleHoldInput.addEventListener('change', (e) => {
-        state.breathPattern.exhaleHold = parseInt(e.target.value);
-        saveState();
-    });
-    
-    // Settings toggles
-    document.getElementById('vibration-toggle').addEventListener('change', (e) => {
-        state.settings.vibration = e.target.checked;
-        saveState();
-    });
-    document.getElementById('sound-toggle').addEventListener('change', (e) => {
-        state.settings.sound = e.target.checked;
-        saveState();
-    });
-    document.getElementById('dark-mode-toggle').addEventListener('change', (e) => {
-        state.settings.darkMode = e.target.checked;
-        saveState();
-        updateUI();
-    });
+    if (pauseBtn) pauseBtn.addEventListener('click', pauseSession);
+    if (endBtn) endBtn.addEventListener('click', endSession);
+    if (backBtn) backBtn.addEventListener('click', () => showScreen('home'));
 }
 
 // ====== OURA HRV INTEGRATION ======
@@ -461,19 +506,15 @@ function updateHRVDisplay() {
     const hrvContainer = document.getElementById('hrv-chart');
     if (!hrvContainer) return;
     
-    // Get last 14 days of HRV data
     const recentData = ouraData.data.slice(-14);
     
-    // Build HRV chart HTML
     let html = '<div class="hrv-section"><h3>HRV Trends (Last 14 Days)</h3><div class="hrv-grid">';
     
     recentData.forEach(day => {
         const date = new Date(day.day);
         const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
         const readiness = day.score || 0;
-        const hrv = day.contributors?.deep_sleep || 0;
         
-        // Check if there was a breathing session that day
         const hadSession = state.history.some(s => {
             const sessionDate = new Date(s.date);
             return sessionDate.toDateString() === date.toDateString();
@@ -491,60 +532,12 @@ function updateHRVDisplay() {
         `;
     });
     
-    html += '</div>';
-    
-    // Add correlation insight
-    const sessionsWithHRV = correlateSessionsWithHRV();
-    if (sessionsWithHRV.length > 3) {
-        const avgWithSessions = sessionsWithHRV.reduce((sum, d) => sum + d.readiness, 0) / sessionsWithHRV.length;
-        const daysWithoutSessions = recentData.filter(d => !sessionsWithHRV.some(s => s.day === d.day));
-        const avgWithoutSessions = daysWithoutSessions.length > 0 
-            ? daysWithoutSessions.reduce((sum, d) => sum + (d.score || 0), 0) / daysWithoutSessions.length 
-            : 0;
-        
-        const improvement = avgWithSessions - avgWithoutSessions;
-        
-        html += `
-            <div class="hrv-insight">
-                <strong>Impact:</strong> 
-                ${improvement > 0 
-                    ? `Your readiness score is ${improvement.toFixed(0)}% higher on days you practice! 🚀` 
-                    : 'Keep practicing - HRV improvements take time.'}
-            </div>
-        `;
-    }
-    
-    html += '</div>';
+    html += '</div></div>';
     hrvContainer.innerHTML = html;
-}
-
-function correlateSessionsWithHRV() {
-    return ouraData.data.map(day => {
-        const hadSession = state.history.some(s => {
-            const sessionDate = new Date(s.date);
-            const ouraDate = new Date(day.day);
-            return sessionDate.toDateString() === ouraDate.toDateString();
-        });
-        
-        return hadSession ? {
-            day: day.day,
-            readiness: day.score || 0,
-            hrv: day.contributors?.deep_sleep || 0
-        } : null;
-    }).filter(d => d !== null);
 }
 
 // ====== START THE APP ======
 document.addEventListener('DOMContentLoaded', () => {
     init();
     loadOuraData();
-    
-    // Reload Oura data when showing analytics
-    const originalShowScreen = showScreen;
-    showScreen = function(screenName) {
-        originalShowScreen(screenName);
-        if (screenName === 'analytics') {
-            updateHRVDisplay();
-        }
-    };
 });
