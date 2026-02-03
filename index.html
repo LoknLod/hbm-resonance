@@ -1,31 +1,609 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Heart Breath Mind Resonance</title>
-<link rel="stylesheet" href="styles.css">
-<script defer src="app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a1628">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="HBM Resonance - Heart-Breath-Mind coherence breathing practice for HRV optimization">
+    
+    <title>HBM Resonance</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- Home Screen -->
-<div id="home-screen">
-    <div id="week-tracker">
-        <span>S</span>
-        <!-- Other days will be dynamically added -->
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="screen active">
+        <div class="splash-content">
+            <div class="splash-icon">
+                <svg viewBox="0 0 100 100" class="heart-icon">
+                    <path class="heart-path" d="M50 88C50 88 10 55 10 35C10 20 22 10 35 10C42 10 48 14 50 18C52 14 58 10 65 10C78 10 90 20 90 35C90 55 50 88 50 88Z"/>
+                </svg>
+            </div>
+            <h1 class="splash-title">HBM Resonance</h1>
+            <p class="splash-subtitle">Heart · Breath · Mind</p>
+            <div class="loading-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
     </div>
-    <p id="motivational-quote">Start your journey towards peacefulness!</p>
-    <button id="start-session">START</button>
-    <div id="settings">
-        <!-- Settings icon -->
+
+    <!-- Onboarding Screen -->
+    <div id="onboarding-screen" class="screen">
+        <div class="onboarding-container">
+            <div class="onboarding-slides">
+                <div class="slide active" data-slide="0">
+                    <div class="slide-icon">🫀</div>
+                    <h2>Welcome to HBM Resonance</h2>
+                    <p>Discover your optimal breathing rhythm to achieve heart-rate variability coherence and unlock your body's natural state of calm focus.</p>
+                </div>
+                <div class="slide" data-slide="1">
+                    <div class="slide-icon">🌊</div>
+                    <h2>10-Week Protocol</h2>
+                    <p>Follow a progressive training program that builds your coherence skills week by week, from basic awareness to advanced resonance mastery.</p>
+                </div>
+                <div class="slide" data-slide="2">
+                    <div class="slide-icon">📊</div>
+                    <h2>Find Your Frequency</h2>
+                    <p>Everyone has a unique resonance frequency (typically 4.5-7 breaths/min). We'll help you discover yours through guided calibration sessions.</p>
+                </div>
+                <div class="slide" data-slide="3">
+                    <div class="slide-icon">✨</div>
+                    <h2>Ready to Begin?</h2>
+                    <p>Commit to just 10-20 minutes daily. Your journey to coherence starts now.</p>
+                    <button id="start-onboarding" class="btn-primary">Begin Journey</button>
+                </div>
+            </div>
+            <div class="slide-dots">
+                <span class="dot active" data-slide="0"></span>
+                <span class="dot" data-slide="1"></span>
+                <span class="dot" data-slide="2"></span>
+                <span class="dot" data-slide="3"></span>
+            </div>
+            <button id="skip-onboarding" class="btn-text">Skip</button>
+        </div>
     </div>
-</div>
-<!-- Session Screen -->
-<div id="session-screen" style="display:none;">
-    <div id="breath-pattern">4s inhale / 6s exhale</div>
-    <canvas id="breathing-circle"></canvas>
-    <button id="pause-session">PAUSE</button>
-    <div id="timer">00:00:00</div>
-</div>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen">
+        <header class="home-header">
+            <div class="week-badge">
+                <span class="week-number">Week 1</span>
+                <span class="week-focus">Foundation</span>
+            </div>
+            <button id="settings-btn" class="icon-btn" aria-label="Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+            </button>
+        </header>
+
+        <main class="home-main">
+            <div class="streak-display">
+                <div class="streak-flame">🔥</div>
+                <span class="streak-count">0</span>
+                <span class="streak-label">day streak</span>
+            </div>
+
+            <div class="week-progress">
+                <div class="day-circles">
+                    <div class="day-circle" data-day="0"><span>S</span></div>
+                    <div class="day-circle" data-day="1"><span>M</span></div>
+                    <div class="day-circle" data-day="2"><span>T</span></div>
+                    <div class="day-circle" data-day="3"><span>W</span></div>
+                    <div class="day-circle" data-day="4"><span>T</span></div>
+                    <div class="day-circle" data-day="5"><span>F</span></div>
+                    <div class="day-circle" data-day="6"><span>S</span></div>
+                </div>
+                <p class="progress-text">0 of 7 sessions this week</p>
+            </div>
+
+            <div class="quote-card">
+                <p class="quote-text">"The breath is the bridge between mind and body."</p>
+                <span class="quote-author">— Thich Nhat Hanh</span>
+            </div>
+
+            <div class="session-options">
+                <button id="quick-session" class="session-btn">
+                    <div class="session-btn-icon">⚡</div>
+                    <div class="session-btn-text">
+                        <span class="session-btn-title">Quick Session</span>
+                        <span class="session-btn-duration">5 minutes</span>
+                    </div>
+                </button>
+                <button id="full-session" class="session-btn primary">
+                    <div class="session-btn-icon">🎯</div>
+                    <div class="session-btn-text">
+                        <span class="session-btn-title">Full Practice</span>
+                        <span class="session-btn-duration">10-20 minutes</span>
+                    </div>
+                </button>
+                <button id="calibration-session" class="session-btn">
+                    <div class="session-btn-icon">🔬</div>
+                    <div class="session-btn-text">
+                        <span class="session-btn-title">Find My Frequency</span>
+                        <span class="session-btn-duration">Calibration</span>
+                    </div>
+                </button>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-screen="home">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" data-screen="protocol">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <span>Protocol</span>
+            </button>
+            <button class="nav-btn" data-screen="analytics">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Stats</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Session Screen -->
+    <div id="session-screen" class="screen">
+        <header class="session-header">
+            <button id="session-back" class="icon-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="session-timer">
+                <span id="session-elapsed">00:00</span>
+                <span class="timer-divider">/</span>
+                <span id="session-target">10:00</span>
+            </div>
+            <button id="session-sound" class="icon-btn" aria-label="Toggle Sound">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sound-on">
+                    <path d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sound-off" style="display:none">
+                    <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/>
+                </svg>
+            </button>
+        </header>
+
+        <main class="session-main">
+            <div class="breath-phase-indicator">
+                <span id="breath-phase">Breathe In</span>
+            </div>
+
+            <div class="breathing-container">
+                <div class="breathing-circle-outer">
+                    <div class="breathing-circle-middle">
+                        <div class="breathing-circle-inner" id="breathing-circle">
+                            <div class="breathing-circle-core"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="breath-timing">
+                    <span id="current-breath-time">0.0</span>s
+                </div>
+            </div>
+
+            <div class="breath-pattern-display">
+                <div class="pattern-segment inhale">
+                    <span class="segment-label">In</span>
+                    <span class="segment-time" id="inhale-time">4.0s</span>
+                </div>
+                <div class="pattern-divider">·</div>
+                <div class="pattern-segment hold-in" id="hold-in-segment" style="display:none">
+                    <span class="segment-label">Hold</span>
+                    <span class="segment-time" id="hold-in-time">0s</span>
+                </div>
+                <div class="pattern-segment exhale">
+                    <span class="segment-label">Out</span>
+                    <span class="segment-time" id="exhale-time">6.0s</span>
+                </div>
+                <div class="pattern-segment hold-out" id="hold-out-segment" style="display:none">
+                    <span class="segment-label">Hold</span>
+                    <span class="segment-time" id="hold-out-time">0s</span>
+                </div>
+            </div>
+
+            <div class="session-controls">
+                <button id="session-pause" class="control-btn pause">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="pause-icon">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="play-icon" style="display:none">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                </button>
+                <button id="session-end" class="control-btn end">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 6h12v12H6z"/>
+                    </svg>
+                </button>
+            </div>
+        </main>
+
+        <div class="session-progress-bar">
+            <div class="progress-fill" id="session-progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Session Complete Screen -->
+    <div id="complete-screen" class="screen">
+        <div class="complete-content">
+            <div class="complete-icon">✨</div>
+            <h2 class="complete-title">Session Complete</h2>
+            
+            <div class="complete-stats">
+                <div class="stat-card">
+                    <span class="stat-value" id="complete-duration">10:00</span>
+                    <span class="stat-label">Duration</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="complete-breaths">60</span>
+                    <span class="stat-label">Breaths</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="complete-rate">6.0</span>
+                    <span class="stat-label">Breaths/min</span>
+                </div>
+            </div>
+
+            <div class="complete-message">
+                <p id="complete-feedback">Great work! Consistency is key to building coherence.</p>
+            </div>
+
+            <div class="complete-actions">
+                <button id="complete-done" class="btn-primary">Done</button>
+                <button id="complete-extend" class="btn-secondary">Extend +5 min</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calibration Screen -->
+    <div id="calibration-screen" class="screen">
+        <header class="session-header">
+            <button id="calibration-back" class="icon-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h1 class="header-title">Find Your Frequency</h1>
+            <div class="header-spacer"></div>
+        </header>
+
+        <main class="calibration-main">
+            <div class="calibration-intro" id="calibration-intro">
+                <div class="calibration-icon">🔬</div>
+                <h2>Resonance Frequency Detection</h2>
+                <p>Your body has a unique breathing frequency that maximizes heart-rate variability coherence. Most people resonate between 4.5-7 breaths per minute.</p>
+                <p>We'll test different rates and ask you to rate how natural each feels. This takes about 5-8 minutes.</p>
+                <button id="start-calibration" class="btn-primary">Start Calibration</button>
+            </div>
+
+            <div class="calibration-test" id="calibration-test" style="display:none">
+                <div class="calibration-progress">
+                    <span>Testing Rate <span id="calibration-current">1</span> of <span id="calibration-total">5</span></span>
+                    <div class="calibration-progress-bar">
+                        <div class="calibration-progress-fill" id="calibration-progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="calibration-rate">
+                    <span id="calibration-rate-value">6.0</span>
+                    <span class="rate-unit">breaths/min</span>
+                </div>
+
+                <div class="breathing-container small">
+                    <div class="breathing-circle-outer">
+                        <div class="breathing-circle-middle">
+                            <div class="breathing-circle-inner" id="calibration-circle">
+                                <div class="breathing-circle-core"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="calibration-timer">
+                    <span id="calibration-time-remaining">60</span>s remaining
+                </div>
+            </div>
+
+            <div class="calibration-rate-screen" id="calibration-rating" style="display:none">
+                <h3>How did that feel?</h3>
+                <p>Rate how natural and comfortable this breathing rate felt:</p>
+                <div class="rating-buttons">
+                    <button class="rating-btn" data-rating="1">😣<span>Difficult</span></button>
+                    <button class="rating-btn" data-rating="2">😕<span>Awkward</span></button>
+                    <button class="rating-btn" data-rating="3">😐<span>Okay</span></button>
+                    <button class="rating-btn" data-rating="4">🙂<span>Natural</span></button>
+                    <button class="rating-btn" data-rating="5">😌<span>Perfect</span></button>
+                </div>
+            </div>
+
+            <div class="calibration-result" id="calibration-result" style="display:none">
+                <div class="result-icon">🎯</div>
+                <h2>Your Resonance Frequency</h2>
+                <div class="result-frequency">
+                    <span id="result-frequency-value">5.5</span>
+                    <span class="result-unit">breaths/min</span>
+                </div>
+                <p class="result-pattern">
+                    Optimal pattern: <strong><span id="result-inhale">5.5</span>s in / <span id="result-exhale">5.5</span>s out</strong>
+                </p>
+                <p class="result-description">This rate produced the strongest sense of ease and flow. Your sessions will now use this personalized frequency.</p>
+                <button id="calibration-done" class="btn-primary">Apply & Continue</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Protocol Screen -->
+    <div id="protocol-screen" class="screen">
+        <header class="screen-header">
+            <h1>10-Week Protocol</h1>
+        </header>
+
+        <main class="protocol-main">
+            <div class="protocol-overview">
+                <p>Progressive training to build lasting coherence skills. Each week introduces new techniques while reinforcing fundamentals.</p>
+            </div>
+
+            <div class="weeks-list" id="weeks-list">
+                <!-- Generated by JS -->
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-btn" data-screen="home">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn active" data-screen="protocol">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <span>Protocol</span>
+            </button>
+            <button class="nav-btn" data-screen="analytics">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Stats</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Week Detail Screen -->
+    <div id="week-detail-screen" class="screen">
+        <header class="session-header">
+            <button id="week-detail-back" class="icon-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h1 class="header-title" id="week-detail-title">Week 1</h1>
+            <div class="header-spacer"></div>
+        </header>
+
+        <main class="week-detail-main" id="week-detail-content">
+            <!-- Generated by JS -->
+        </main>
+    </div>
+
+    <!-- Analytics Screen -->
+    <div id="analytics-screen" class="screen">
+        <header class="screen-header">
+            <h1>Your Progress</h1>
+        </header>
+
+        <main class="analytics-main">
+            <div class="analytics-summary">
+                <div class="summary-card">
+                    <span class="summary-value" id="total-sessions">0</span>
+                    <span class="summary-label">Total Sessions</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-value" id="total-minutes">0</span>
+                    <span class="summary-label">Total Minutes</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-value" id="current-streak">0</span>
+                    <span class="summary-label">Current Streak</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-value" id="longest-streak">0</span>
+                    <span class="summary-label">Best Streak</span>
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>This Week</h3>
+                <div class="week-chart" id="week-chart">
+                    <div class="chart-bar" data-day="0"><div class="bar-fill"></div><span>S</span></div>
+                    <div class="chart-bar" data-day="1"><div class="bar-fill"></div><span>M</span></div>
+                    <div class="chart-bar" data-day="2"><div class="bar-fill"></div><span>T</span></div>
+                    <div class="chart-bar" data-day="3"><div class="bar-fill"></div><span>W</span></div>
+                    <div class="chart-bar" data-day="4"><div class="bar-fill"></div><span>T</span></div>
+                    <div class="chart-bar" data-day="5"><div class="bar-fill"></div><span>F</span></div>
+                    <div class="chart-bar" data-day="6"><div class="bar-fill"></div><span>S</span></div>
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>Recent Sessions</h3>
+                <div class="sessions-list" id="sessions-list">
+                    <p class="empty-state">No sessions yet. Start your first practice!</p>
+                </div>
+            </div>
+
+            <div id="hrv-chart" class="analytics-section">
+                <!-- HRV data will be loaded here by JavaScript -->
+            </div>
+
+            <div class="analytics-section">
+                <h3>Your Settings</h3>
+                <div class="current-settings">
+                    <div class="setting-row">
+                        <span>Resonance Frequency</span>
+                        <span id="setting-frequency">6.0 breaths/min</span>
+                    </div>
+                    <div class="setting-row">
+                        <span>Current Pattern</span>
+                        <span id="setting-pattern">4s in / 6s out</span>
+                    </div>
+                    <div class="setting-row">
+                        <span>Protocol Week</span>
+                        <span id="setting-week">Week 1</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-btn" data-screen="home">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span>Home</span>
+            </button>
+            <button class="nav-btn" data-screen="protocol">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                <span>Protocol</span>
+            </button>
+            <button class="nav-btn active" data-screen="analytics">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Stats</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen" class="screen">
+        <header class="session-header">
+            <button id="settings-back" class="icon-btn" aria-label="Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h1 class="header-title">Settings</h1>
+            <div class="header-spacer"></div>
+        </header>
+
+        <main class="settings-main">
+            <div class="settings-section">
+                <h3>Breathing Pattern</h3>
+                
+                <div class="setting-item">
+                    <label>Inhale Duration</label>
+                    <div class="slider-container">
+                        <input type="range" id="inhale-slider" min="2" max="8" step="0.5" value="4">
+                        <span class="slider-value" id="inhale-value">4.0s</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Exhale Duration</label>
+                    <div class="slider-container">
+                        <input type="range" id="exhale-slider" min="2" max="10" step="0.5" value="6">
+                        <span class="slider-value" id="exhale-value">6.0s</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Post-Inhale Hold</label>
+                    <div class="slider-container">
+                        <input type="range" id="hold-in-slider" min="0" max="4" step="0.5" value="0">
+                        <span class="slider-value" id="hold-in-value">0s</span>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Post-Exhale Hold</label>
+                    <div class="slider-container">
+                        <input type="range" id="hold-out-slider" min="0" max="4" step="0.5" value="0">
+                        <span class="slider-value" id="hold-out-value">0s</span>
+                    </div>
+                </div>
+
+                <div class="breath-preview">
+                    <span>Pattern: </span>
+                    <strong id="pattern-preview">4s in / 6s out = 6.0 breaths/min</strong>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Session Defaults</h3>
+                
+                <div class="setting-item">
+                    <label>Quick Session Duration</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-quick="3">3 min</button>
+                        <button class="option-btn active" data-quick="5">5 min</button>
+                        <button class="option-btn" data-quick="7">7 min</button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Full Session Duration</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-full="10">10 min</button>
+                        <button class="option-btn active" data-full="15">15 min</button>
+                        <button class="option-btn" data-full="20">20 min</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Audio</h3>
+                
+                <div class="setting-item toggle-item">
+                    <label>Sound Cues</label>
+                    <button class="toggle-btn active" id="sound-toggle">
+                        <span class="toggle-slider"></span>
+                    </button>
+                </div>
+
+                <div class="setting-item toggle-item">
+                    <label>Vibration (if supported)</label>
+                    <button class="toggle-btn" id="vibration-toggle">
+                        <span class="toggle-slider"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Protocol</h3>
+                
+                <div class="setting-item">
+                    <label>Current Week</label>
+                    <select id="week-select">
+                        <option value="1">Week 1 - Foundation</option>
+                        <option value="2">Week 2 - Awareness</option>
+                        <option value="3">Week 3 - Rhythm</option>
+                        <option value="4">Week 4 - Deepening</option>
+                        <option value="5">Week 5 - Extension</option>
+                        <option value="6">Week 6 - Integration</option>
+                        <option value="7">Week 7 - Refinement</option>
+                        <option value="8">Week 8 - Mastery</option>
+                        <option value="9">Week 9 - Application</option>
+                        <option value="10">Week 10 - Autonomy</option>
+                    </select>
+                </div>
+
+                <button id="recalibrate-btn" class="btn-secondary">Re-calibrate Resonance Frequency</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>Data</h3>
+                <button id="export-data" class="btn-secondary">Export Session Data</button>
+                <button id="reset-data" class="btn-danger">Reset All Data</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
