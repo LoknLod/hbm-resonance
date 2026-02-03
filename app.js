@@ -105,6 +105,70 @@ function setupNavigation() {
             showScreen(btn.dataset.target);
         });
     });
+    
+    // Onboarding navigation
+    setupOnboarding();
+}
+
+function setupOnboarding() {
+    const skipBtn = document.getElementById('skip-onboarding');
+    const startBtn = document.getElementById('start-onboarding');
+    const dots = document.querySelectorAll('.slide-dots .dot');
+    const slides = document.querySelectorAll('.onboarding-slides .slide');
+    let currentSlide = 0;
+    
+    function goToSlide(index) {
+        slides.forEach(s => s.classList.remove('active'));
+        dots.forEach(d => d.classList.remove('active'));
+        slides[index].classList.add('active');
+        dots[index].classList.add('active');
+        currentSlide = index;
+    }
+    
+    // Skip button
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            document.getElementById('onboarding-screen').classList.remove('active');
+            document.getElementById('home-screen').classList.add('active');
+        });
+    }
+    
+    // Start button (on last slide)
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            document.getElementById('onboarding-screen').classList.remove('active');
+            document.getElementById('home-screen').classList.add('active');
+        });
+    }
+    
+    // Dot navigation
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => goToSlide(index));
+    });
+    
+    // Swipe support
+    let touchStartX = 0;
+    const onboardingSlides = document.querySelector('.onboarding-slides');
+    if (onboardingSlides) {
+        onboardingSlides.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+        
+        onboardingSlides.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > 50) { // Minimum swipe distance
+                if (diff > 0 && currentSlide < slides.length - 1) {
+                    // Swipe left - next slide
+                    goToSlide(currentSlide + 1);
+                } else if (diff < 0 && currentSlide > 0) {
+                    // Swipe right - previous slide
+                    goToSlide(currentSlide - 1);
+                }
+            }
+        });
+    }
 }
 
 function showScreen(screenName) {
