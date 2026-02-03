@@ -11,7 +11,7 @@ const state = {
     streak: 0,
     lastSessionDate: null,
     calibration: { rate: 6, complete: false },
-    settings: { vibration: true, sound: false, darkMode: false }
+    settings: { vibration: true, sound: true, darkMode: false }
 };
 
 // ====== DOM ELEMENTS ======
@@ -22,6 +22,63 @@ const screens = {
     analytics: document.getElementById('analytics-screen'),
     settings: document.getElementById('settings-screen')
 };
+
+// ====== AUDIO SYSTEM ======
+let audioContext = null;
+let oscillator = null;
+let gainNode = null;
+
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        gainNode = audioContext.createGain();
+        gainNode.connect(audioContext.destination);
+        gainNode.gain.value = 0.15; // Gentle volume
+    }
+}
+
+function startBreathTone() {
+    if (!state.settings.sound || !audioContext) return;
+    
+    stopBreathTone();
+    
+    oscillator = audioContext.createOscillator();
+    oscillator.type = 'sine'; // Smooth, calming tone
+    oscillator.frequency.value = 200; // Starting frequency
+    oscillator.connect(gainNode);
+    oscillator.start();
+}
+
+function updateBreathTone(phase, progress) {
+    if (!state.settings.sound || !oscillator) return;
+    
+    // Map breathing phases to frequency ranges
+    let targetFreq = 200;
+    
+    if (phase === 'inhale') {
+        // Rise from 200Hz to 400Hz during inhale
+        targetFreq = 200 + (progress * 200);
+    } else if (phase === 'exhale') {
+        // Fall from 400Hz to 200Hz during exhale
+        targetFreq = 400 - (progress * 200);
+    } else {
+        // Hold phases: maintain frequency
+        targetFreq = phase === 'inhaleHold' ? 400 : 200;
+    }
+    
+    oscillator.frequency.setValueAtTime(targetFreq, audioContext.currentTime);
+}
+
+function stopBreathTone() {
+    if (oscillator) {
+        try {
+            oscillator.stop();
+        } catch (e) {
+            // Oscillator already stopped
+        }
+        oscillator = null;
+    }
+}
 
 // ====== INITIALIZATION ======
 function init() {
@@ -83,7 +140,7 @@ function loadState() {
             streak: saved.streak || 0,
             lastSessionDate: saved.lastSessionDate ? new Date(saved.lastSessionDate) : null,
             calibration: saved.calibration || { rate: 6, complete: false },
-            settings: saved.settings || { vibration: true, sound: false, darkMode: false },
+            settings: saved.settings || { vibration: true, sound: true, darkMode: false },
             currentWeek: saved.currentWeek || 1,
             breathPattern: saved.breathPattern || { inhale: 4, exhale: 6, inhaleHold: 0, exhaleHold: 0 }
         });
@@ -182,6 +239,17 @@ function showScreen(screenName) {
         state.currentScreen = screenName;
     }
     
+    // Update sound icon when entering session screen
+    if (screenName === 'session') {
+        const soundBtn = document.getElementById('session-sound');
+        if (soundBtn) {
+            const soundOn = soundBtn.querySelector('.sound-on');
+            const soundOff = soundBtn.querySelector('.sound-off');
+            if (soundOn) soundOn.style.display = state.settings.sound ? 'block' : 'none';
+            if (soundOff) soundOff.style.display = state.settings.sound ? 'none' : 'block';
+        }
+    }
+    
     updateUI();
 }
 
@@ -202,6 +270,12 @@ function startSession() {
     phaseTimer = 0;
     phaseStartTime = Date.now();
     
+    // Initialize and start audio
+    initAudio();
+    if (state.settings.sound) {
+        startBreathTone();
+    }
+    
     // Start timer
     sessionInterval = setInterval(() => {
         state.sessionTimer++;
@@ -217,10 +291,14 @@ function pauseSession() {
     if (state.sessionState === 'running') {
         state.sessionState = 'paused';
         clearInterval(sessionInterval);
+        stopBreathTone();
         updateUI();
     } else if (state.sessionState === 'paused') {
         state.sessionState = 'running';
         phaseStartTime = Date.now();
+        if (state.settings.sound) {
+            startBreathTone();
+        }
         sessionInterval = setInterval(() => {
             state.sessionTimer++;
             updateTimerDisplay();
@@ -233,6 +311,7 @@ function pauseSession() {
 function endSession() {
     state.sessionState = 'idle';
     clearInterval(sessionInterval);
+    stopBreathTone();
     
     // Record session
     const sessionData = {
@@ -310,6 +389,9 @@ function animateBreathing() {
     if (circle) {
         circle.style.transform = `scale(${scale})`;
     }
+    
+    // Update audio tone to match breathing phase
+    updateBreathTone(breathPhase, progress);
     
     requestAnimationFrame(animateBreathing);
 }
@@ -481,10 +563,33 @@ function setupEventListeners() {
     const pauseBtn = document.getElementById('session-pause');
     const endBtn = document.getElementById('session-end');
     const backBtn = document.getElementById('session-back');
+    const soundBtn = document.getElementById('session-sound');
     
     if (pauseBtn) pauseBtn.addEventListener('click', pauseSession);
     if (endBtn) endBtn.addEventListener('click', endSession);
     if (backBtn) backBtn.addEventListener('click', () => showScreen('home'));
+    
+    if (soundBtn) {
+        soundBtn.addEventListener('click', () => {
+            state.settings.sound = !state.settings.sound;
+            saveState();
+            
+            // Toggle sound on/off icons
+            const soundOn = soundBtn.querySelector('.sound-on');
+            const soundOff = soundBtn.querySelector('.sound-off');
+            if (soundOn) soundOn.style.display = state.settings.sound ? 'block' : 'none';
+            if (soundOff) soundOff.style.display = state.settings.sound ? 'none' : 'block';
+            
+            // Start or stop audio based on new setting
+            if (state.sessionState === 'running') {
+                if (state.settings.sound) {
+                    startBreathTone();
+                } else {
+                    stopBreathTone();
+                }
+            }
+        });
+    }
 }
 
 // ====== OURA HRV INTEGRATION ======
