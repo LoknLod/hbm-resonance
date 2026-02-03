@@ -662,17 +662,6 @@ function setupBreathPatternControls() {
     const holdOutValue = document.getElementById('hold-out-value');
     const patternPreview = document.getElementById('pattern-preview');
     
-    // Resonance frequency presets from the book
-    const presets = {
-        '7.0': { inhale: 3.4, exhale: 5.2 },
-        '6.5': { inhale: 3.7, exhale: 5.5 },
-        '6.2': { inhale: 3.8, exhale: 5.8 },
-        '6.0': { inhale: 4.0, exhale: 6.0 },
-        '5.7': { inhale: 4.2, exhale: 6.2 },
-        '5.5': { inhale: 4.4, exhale: 6.6 },
-        '5.0': { inhale: 4.8, exhale: 7.2 }
-    };
-    
     function updateBreathPattern() {
         state.breathPattern.inhale = parseFloat(inhaleSlider.value);
         state.breathPattern.exhale = parseFloat(exhaleSlider.value);
@@ -696,24 +685,22 @@ function setupBreathPatternControls() {
         saveState();
     }
     
-    // Preset buttons
+    // Calibration preset buttons (from book)
     document.querySelectorAll('[data-preset]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const bpm = btn.getAttribute('data-preset');
-            const preset = presets[bpm];
+            const presetValue = btn.getAttribute('data-preset');
+            const [inhale, exhale] = presetValue.split(',').map(parseFloat);
             
-            if (preset) {
-                inhaleSlider.value = preset.inhale;
-                exhaleSlider.value = preset.exhale;
-                holdInSlider.value = 0;
-                holdOutSlider.value = 0;
-                
-                // Update active state
-                document.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                updateBreathPattern();
-            }
+            if (inhaleSlider) inhaleSlider.value = inhale;
+            if (exhaleSlider) exhaleSlider.value = exhale;
+            if (holdInSlider) holdInSlider.value = 0;  // Presets don't include holds
+            if (holdOutSlider) holdOutSlider.value = 0;
+            
+            // Update active state
+            document.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            updateBreathPattern();
         });
     });
     
