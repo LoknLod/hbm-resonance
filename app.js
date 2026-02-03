@@ -40,6 +40,22 @@ const elements = {
 
 // ====== INITIALIZATION ======
 function init() {
+    // Hide splash screen after a brief delay
+    setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        const onboarding = document.getElementById('onboarding-screen');
+        const homeScreen = document.getElementById('home-screen');
+        
+        if (splash) splash.classList.remove('active');
+        
+        // Show onboarding if first time, otherwise go to home
+        if (!state.calibration.complete) {
+            if (onboarding) onboarding.classList.add('active');
+        } else {
+            if (homeScreen) homeScreen.classList.add('active');
+        }
+    }, 1500);
+    
     loadState();
     setupNavigation();
     setupEventListeners();
