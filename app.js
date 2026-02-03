@@ -475,17 +475,17 @@ function nextWeek() {
 
 // ====== CALIBRATION ======
 function startCalibration() {
-    const originalPattern = {...state.breathPattern};
-    state.breathPattern = { inhale: 3, exhale: 3, inhaleHold: 0, exhaleHold: 0 };
+    // Use the pattern you've set in settings (not forcing 3s/3s)
+    // This lets you test different preset patterns to find your resonance frequency
     startSession();
     
+    // After 60 seconds, calculate and save the breathing rate
     setTimeout(() => {
         const breathsPerMinute = state.breathCount;
         endSession();
         
         state.calibration.rate = Math.min(7, Math.max(5, breathsPerMinute));
         state.calibration.complete = true;
-        state.breathPattern = originalPattern;
         saveState();
         updateUI();
     }, 60000);
