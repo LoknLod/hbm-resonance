@@ -1,21 +1,43 @@
 {
   "short_name": "HBM Resonance",
   "name": "Heart Breath Mind Resonance",
+  "description": "Heart-Breath-Mind coherence breathing practice for HRV optimization. Find your resonance frequency and achieve optimal heart rate variability.",
   "icons": [
     {
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ],
+  "id": "hbm-resonance",
   "start_url": ".",
   "background_color": "#0d0d0d",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "scope": ".",
-  "theme_color": "#0d0d0d"
+  "theme_color": "#0d0d0d",
+  "orientation": "portrait",
+  "categories": ["health", "fitness", "meditation", "wellness"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "HBM Resonance App"
+    }
+  ],
+  "features": [
+    "cross-origin-isolated"
+  ]
 }
