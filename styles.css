@@ -631,17 +631,18 @@ body {
 .session-main {
     flex: 1;
     display: grid;
-    grid-template-rows: auto 1fr auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
         "phase"
         "circle"
         "pattern"
         "controls";
     gap: 0;
-    padding: 0 24px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding: 0 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
     overflow: hidden;
     position: relative;
+    align-items: center;
 }
 
 /* Phase indicator - top area, small and subtle */
@@ -650,8 +651,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: 16px;
-    padding-bottom: 8px;
+    padding-top: 8px;
+    padding-bottom: 4px;
 }
 
 #breath-phase {
@@ -671,18 +672,19 @@ body {
 .breathing-container {
     grid-area: circle;
     position: relative;
-    width: 300px;
-    height: 300px;
+    width: 380px;
+    height: 380px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin: 0 auto; /* Center horizontally */
+    margin: 10vh auto 0; /* Position lower on screen (below center) */
+    align-self: start; /* Align to top of grid cell, then use margin-top */
 }
 
 .breathing-container.small {
-    width: 200px;
-    height: 200px;
+    width: 240px;
+    height: 240px;
 }
 
 .breathing-circle-outer {
@@ -751,7 +753,7 @@ body {
 /* Breath timing display - positioned below circle */
 .breath-timing {
     position: absolute;
-    bottom: -36px;
+    bottom: -40px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 1.75rem;
@@ -774,9 +776,9 @@ body {
     justify-content: center;
     gap: 16px;
     background: var(--bg-card);
-    padding: 12px 24px;
+    padding: 10px 20px;
     border-radius: var(--radius-full);
-    margin: 24px auto 0;
+    margin: 16px auto 0;
     width: fit-content;
     max-width: 90%;
 }
@@ -819,7 +821,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 24px;
-    padding: 20px 0 8px;
+    padding: 12px 0 4px;
 }
 
 .control-btn {
@@ -1592,8 +1594,8 @@ body {
 /* Small phones - iPhone SE, mini */
 @media (max-width: 380px) {
     .breathing-container {
-        width: 260px;
-        height: 260px;
+        width: 300px;
+        height: 300px;
     }
     
     .breath-timing {
@@ -1602,18 +1604,22 @@ body {
     }
     
     .breath-pattern-display {
-        padding: 10px 18px;
-        gap: 12px;
-        margin-top: 16px;
+        padding: 8px 14px;
+        gap: 10px;
+        margin-top: 12px;
     }
     
     .segment-time {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+    }
+    
+    .segment-label {
+        font-size: 0.65rem;
     }
     
     .session-controls {
         gap: 20px;
-        padding: 16px 0 4px;
+        padding: 10px 0 2px;
     }
     
     .control-btn {
@@ -1647,25 +1653,26 @@ body {
 /* Medium phones - iPhone 12/13/14/15 */
 @media (min-width: 381px) and (max-width: 430px) {
     .breathing-container {
-        width: 280px;
-        height: 280px;
+        width: 360px;
+        height: 360px;
     }
     
     .breath-pattern-display {
-        margin-top: 20px;
+        margin-top: 16px;
+        padding: 10px 18px;
     }
 }
 
 /* Large phones and small tablets */
 @media (min-width: 431px) and (max-width: 767px) {
     .breathing-container {
-        width: 320px;
-        height: 320px;
+        width: 400px;
+        height: 400px;
     }
     
     .breath-pattern-display {
-        margin-top: 28px;
-        padding: 14px 28px;
+        margin-top: 20px;
+        padding: 12px 24px;
     }
 }
 
@@ -1686,14 +1693,14 @@ body {
     }
     
     .breathing-container {
-        width: 340px;
-        height: 340px;
+        width: 420px;
+        height: 420px;
     }
     
     .breath-pattern-display {
         padding: 14px 32px;
         gap: 20px;
-        margin-top: 32px;
+        margin-top: 24px;
     }
     
     .segment-time {
@@ -1702,7 +1709,7 @@ body {
     
     .session-controls {
         gap: 32px;
-        padding: 28px 0 16px;
+        padding: 20px 0 12px;
     }
     
     .control-btn {
