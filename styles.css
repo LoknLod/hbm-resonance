@@ -642,7 +642,7 @@ body {
     padding-bottom: max(12px, env(safe-area-inset-bottom));
     overflow: hidden;
     position: relative;
-    align-items: center;
+    align-items: end;
 }
 
 /* Phase indicator - top area, small and subtle */
@@ -678,7 +678,7 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin: 10vh auto 0; /* Position lower on screen (below center) */
+    margin: 5vh auto 8vh; /* Center horizontally, push towards bottom half */
     align-self: start; /* Align to top of grid cell, then use margin-top */
 }
 
@@ -1596,6 +1596,7 @@ body {
     .breathing-container {
         width: 300px;
         height: 300px;
+        margin-top: 25vh;
     }
     
     .breath-timing {
@@ -1655,6 +1656,7 @@ body {
     .breathing-container {
         width: 360px;
         height: 360px;
+        margin-top: 28vh;
     }
     
     .breath-pattern-display {
@@ -1668,6 +1670,7 @@ body {
     .breathing-container {
         width: 400px;
         height: 400px;
+        margin-top: 28vh;
     }
     
     .breath-pattern-display {
@@ -1695,6 +1698,7 @@ body {
     .breathing-container {
         width: 420px;
         height: 420px;
+        margin-top: 30vh;
     }
     
     .breath-pattern-display {
