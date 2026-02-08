@@ -257,14 +257,12 @@ function showScreen(screenName) {
     Object.values(screens).forEach(screen => {
         if (screen) {
             screen.classList.remove('active');
-            screen.style.display = 'none';
         }
     });
-    
-    // Activate the target screen
+
+    // Activate the target screen (CSS handles display: flex via .screen.active)
     if (screens[screenName]) {
         screens[screenName].classList.add('active');
-        screens[screenName].style.display = 'block';
         state.currentScreen = screenName;
     }
     
