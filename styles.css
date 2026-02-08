@@ -678,8 +678,8 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin: 5vh auto 8vh; /* Center horizontally, push towards bottom half */
-    align-self: start; /* Align to top of grid cell, then use margin-top */
+    margin: 15vh auto 4vh; /* Position lower on screen (~65% from top) */
+    align-self: end; /* Align to bottom of grid cell for lower positioning */
 }
 
 .breathing-container.small {
