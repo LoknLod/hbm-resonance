@@ -23,7 +23,9 @@ const screens = {
     settings: document.getElementById('settings-screen'),
     calibration: document.getElementById('calibration-screen'),
     complete: document.getElementById('complete-screen'),
-    weekDetail: document.getElementById('week-detail-screen')
+    weekDetail: document.getElementById('week-detail-screen'),
+    splash: document.getElementById('splash-screen'),
+    onboarding: document.getElementById('onboarding-screen')
 };
 
 // ====== AUDIO SYSTEM ======
@@ -120,24 +122,20 @@ function init() {
     updateUI();
     setupServiceWorker();
     
-    // Skip straight to home screen
+    // Splash screen transition - show for 2 seconds then go to home
     setTimeout(() => {
         const splash = document.getElementById('splash-screen');
-        const onboarding = document.getElementById('onboarding-screen');
         const homeScreen = document.getElementById('home-screen');
         
         if (splash) {
             splash.classList.remove('active');
-        }
-        if (onboarding) {
-            onboarding.classList.remove('active');
         }
         if (homeScreen) {
             homeScreen.classList.add('active');
         }
         
         state.currentScreen = 'home';
-    }, 100);
+    }, 2000);
 }
 
 function setupServiceWorker() {
@@ -277,6 +275,12 @@ function showScreen(screenName) {
         }
     }
     
+    // Scroll to top for new screens
+    const activeScreen = screens[screenName];
+    if (activeScreen) {
+        activeScreen.scrollTop = 0;
+    }
+    
     updateUI();
 }
 
@@ -351,7 +355,35 @@ function endSession() {
     state.history.push(sessionData);
     updateStreak();
     saveState();
-    showScreen('home');
+    
+    // Update complete screen stats
+    updateCompleteScreen();
+    
+    // Navigate to complete screen instead of home
+    showScreen('complete');
+}
+
+function updateCompleteScreen() {
+    // Update duration display
+    const completeDuration = document.getElementById('complete-duration');
+    if (completeDuration) {
+        const minutes = Math.floor(state.sessionTimer / 60);
+        const seconds = state.sessionTimer % 60;
+        completeDuration.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
+    
+    // Update breath count
+    const completeBreaths = document.getElementById('complete-breaths');
+    if (completeBreaths) {
+        completeBreaths.textContent = state.breathCount;
+    }
+    
+    // Update breath rate
+    const completeRate = document.getElementById('complete-rate');
+    if (completeRate && state.sessionTimer > 0) {
+        const rate = (state.breathCount / (state.sessionTimer / 60)).toFixed(1);
+        completeRate.textContent = rate;
+    }
 }
 
 function animateBreathing() {
@@ -711,7 +743,15 @@ function setupEventListeners() {
     
     if (pauseBtn) pauseBtn.addEventListener('click', pauseSession);
     if (endBtn) endBtn.addEventListener('click', endSession);
-    if (backBtn) backBtn.addEventListener('click', () => showScreen('home'));
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            // Pause session if running, then go home
+            if (state.sessionState === 'running') {
+                pauseSession();
+            }
+            showScreen('home');
+        });
+    }
     
     if (soundBtn) {
         soundBtn.addEventListener('click', () => {
