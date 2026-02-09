@@ -20,7 +20,10 @@ const screens = {
     session: document.getElementById('session-screen'),
     protocol: document.getElementById('protocol-screen'),
     analytics: document.getElementById('analytics-screen'),
-    settings: document.getElementById('settings-screen')
+    settings: document.getElementById('settings-screen'),
+    calibration: document.getElementById('calibration-screen'),
+    complete: document.getElementById('complete-screen'),
+    weekDetail: document.getElementById('week-detail-screen')
 };
 
 // ====== AUDIO SYSTEM ======
@@ -125,15 +128,12 @@ function init() {
         
         if (splash) {
             splash.classList.remove('active');
-            splash.style.display = 'none';
         }
         if (onboarding) {
             onboarding.classList.remove('active');
-            onboarding.style.display = 'none';
         }
         if (homeScreen) {
             homeScreen.classList.add('active');
-            homeScreen.style.display = 'block';
         }
         
         state.currentScreen = 'home';
@@ -492,22 +492,111 @@ function nextWeek() {
 }
 
 // ====== CALIBRATION ======
+let calibrationTestInterval = null;
+
+function showCalibrationSection(sectionId) {
+    const sections = ['calibration-intro', 'calibration-test', 'calibration-rating', 'calibration-result'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = id === sectionId ? 'block' : 'none';
+    });
+}
+
 function startCalibration() {
-    // Use the pattern you've set in settings (not forcing 3s/3s)
-    // This lets you test different preset patterns to find your resonance frequency
-    startSession();
+    // Show the calibration screen first
+    showScreen('calibration');
+    showCalibrationSection('calibration-intro');
+}
+
+function startCalibrationTest() {
+    showCalibrationSection('calibration-test');
     
-    // After 60 seconds, calculate and save the breathing rate
-    setTimeout(() => {
-        const breathsPerMinute = state.breathCount;
-        endSession();
+    // Start a 60-second test session
+    let timeRemaining = 60;
+    const timeDisplay = document.getElementById('calibration-time-remaining');
+    
+    // Update countdown
+    calibrationTestInterval = setInterval(() => {
+        timeRemaining--;
+        if (timeDisplay) timeDisplay.textContent = timeRemaining;
         
-        state.calibration.rate = Math.min(7, Math.max(5, breathsPerMinute));
+        if (timeRemaining <= 0) {
+            clearInterval(calibrationTestInterval);
+            showCalibrationSection('calibration-rating');
+        }
+    }, 1000);
+    
+    // Start breathing animation for calibration
+    startCalibrationBreathing();
+}
+
+function startCalibrationBreathing() {
+    const circle = document.getElementById('calibration-circle');
+    if (!circle) return;
+    
+    let startTime = Date.now();
+    const inhaleTime = 4000; // 4s inhale
+    const exhaleTime = 6000; // 6s exhale
+    const cycleTime = inhaleTime + exhaleTime;
+    
+    function animate() {
+        const elapsed = Date.now() - startTime;
+        const cycleProgress = elapsed % cycleTime;
+        
+        let scale = 1;
+        if (cycleProgress < inhaleTime) {
+            // Inhale: 1.0 -> 1.5
+            scale = 1 + (cycleProgress / inhaleTime) * 0.5;
+        } else {
+            // Exhale: 1.5 -> 1.0
+            const exhaleProgress = cycleProgress - inhaleTime;
+            scale = 1.5 - (exhaleProgress / exhaleTime) * 0.5;
+        }
+        
+        circle.style.transform = `scale(${scale})`;
+        
+        // Continue animation if still in test
+        const timeDisplay = document.getElementById('calibration-time-remaining');
+        if (timeDisplay && parseInt(timeDisplay.textContent) > 0) {
+            requestAnimationFrame(animate);
+        }
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// Handle calibration rating selection
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.rating-btn')) {
+        const btn = e.target.closest('.rating-btn');
+        const rating = parseInt(btn.getAttribute('data-rating'));
+        
+        // Save the rating and show results
+        // For now, just use a default resonance rate based on the rating
+        const baseRate = 5.5 + (rating - 3) * 0.3;
+        state.calibration.rate = Math.min(7, Math.max(4.5, baseRate));
         state.calibration.complete = true;
         saveState();
-        updateUI();
-    }, 60000);
-}
+        
+        // Update result display
+        const resultValue = document.getElementById('result-frequency-value');
+        const resultInhale = document.getElementById('result-inhale');
+        const resultExhale = document.getElementById('result-exhale');
+        
+        if (resultValue) resultValue.textContent = state.calibration.rate.toFixed(1);
+        if (resultInhale) resultInhale.textContent = (60 / state.calibration.rate / 2).toFixed(1);
+        if (resultExhale) resultExhale.textContent = (60 / state.calibration.rate / 2).toFixed(1);
+        
+        showCalibrationSection('calibration-result');
+    }
+});
+
+// Handle start calibration button in the calibration screen
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'start-calibration') {
+        startCalibrationTest();
+    }
+});
 
 // ====== UI UPDATES ======
 function updateUI() {
@@ -652,6 +741,30 @@ function setupEventListeners() {
     
     if (settingsBack) settingsBack.addEventListener('click', () => showScreen('home'));
     if (settingsBtn) settingsBtn.addEventListener('click', () => showScreen('settings'));
+    
+    // Complete screen controls
+    const completeDone = document.getElementById('complete-done');
+    const completeExtend = document.getElementById('complete-extend');
+    
+    if (completeDone) completeDone.addEventListener('click', () => showScreen('home'));
+    if (completeExtend) completeExtend.addEventListener('click', () => {
+        state.sessionDuration += 300; // Add 5 minutes
+        showScreen('session');
+        setTimeout(() => startSession(), 100);
+    });
+    
+    // Calibration screen controls
+    const calibrationBack = document.getElementById('calibration-back');
+    const startCalibrationBtn = document.getElementById('start-calibration');
+    const calibrationDone = document.getElementById('calibration-done');
+    
+    if (calibrationBack) calibrationBack.addEventListener('click', () => showScreen('home'));
+    if (startCalibrationBtn) startCalibrationBtn.addEventListener('click', startCalibration);
+    if (calibrationDone) calibrationDone.addEventListener('click', () => showScreen('home'));
+    
+    // Week detail screen back button
+    const weekDetailBack = document.getElementById('week-detail-back');
+    if (weekDetailBack) weekDetailBack.addEventListener('click', () => showScreen('protocol'));
     
     // Breath pattern sliders
     setupBreathPatternControls();
