@@ -15,31 +15,47 @@ const state = {
 };
 
 // ====== DOM ELEMENTS ======
-const screens = {
-    home: document.getElementById('home-screen'),
-    session: document.getElementById('session-screen'),
-    protocol: document.getElementById('protocol-screen'),
-    analytics: document.getElementById('analytics-screen'),
-    settings: document.getElementById('settings-screen'),
-    calibration: document.getElementById('calibration-screen'),
-    complete: document.getElementById('complete-screen'),
-    weekDetail: document.getElementById('week-detail-screen'),
-    splash: document.getElementById('splash-screen'),
-    onboarding: document.getElementById('onboarding-screen')
-};
+// Lazy-loaded to ensure DOM is ready (fixes iOS Safari freeze)
+function getScreens() {
+    return {
+        home: document.getElementById('home-screen'),
+        session: document.getElementById('session-screen'),
+        protocol: document.getElementById('protocol-screen'),
+        analytics: document.getElementById('analytics-screen'),
+        settings: document.getElementById('settings-screen'),
+        calibration: document.getElementById('calibration-screen'),
+        complete: document.getElementById('complete-screen'),
+        weekDetail: document.getElementById('week-detail-screen'),
+        splash: document.getElementById('splash-screen'),
+        onboarding: document.getElementById('onboarding-screen')
+    };
+}
 
 // ====== AUDIO SYSTEM ======
 let audioContext = null;
 let oscillator = null;
 let gainNode = null;
+let audioEnabledByUser = false;
+let hasUserInteracted = false;
+
+// Check if we're on iOS Safari (which has strict autoplay policies)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const needsUserGestureForAudio = isIOS || isSafari;
 
 async function initAudio() {
+    // iOS/Safari: Don't init until user has interacted
+    if (needsUserGestureForAudio && !hasUserInteracted) {
+        console.log('Audio init deferred - waiting for user interaction');
+        return;
+    }
+    
     if (!audioContext) {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             gainNode = audioContext.createGain();
             gainNode.connect(audioContext.destination);
-            gainNode.gain.value = 0.2; // Increased volume slightly
+            gainNode.gain.value = 0.2;
             console.log('AudioContext created, state:', audioContext.state);
         } catch (err) {
             console.error('Failed to create AudioContext:', err);
@@ -58,8 +74,33 @@ async function initAudio() {
     }
 }
 
+// Mark that user has interacted - call this on any user gesture
+function markUserInteraction() {
+    if (!hasUserInteracted) {
+        hasUserInteracted = true;
+        console.log('User interaction detected - audio can now be enabled');
+        
+        // Hide the enable sound overlay if present
+        const overlay = document.getElementById('audio-enable-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+        
+        // If sound is enabled in settings, init audio now
+        if (state.settings.sound) {
+            initAudio();
+        }
+    }
+}
+
 async function startBreathTone() {
     if (!state.settings.sound) return;
+    
+    // iOS/Safari: Show enable sound overlay if user hasn't interacted yet
+    if (needsUserGestureForAudio && !hasUserInteracted) {
+        showAudioEnableOverlay();
+        return;
+    }
     
     // Ensure audio is initialized and running
     await initAudio();
@@ -81,6 +122,44 @@ async function startBreathTone() {
     } catch (err) {
         console.error('Failed to start oscillator:', err);
     }
+}
+
+function showAudioEnableOverlay() {
+    let overlay = document.getElementById('audio-enable-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'audio-enable-overlay';
+        overlay.className = 'audio-enable-overlay';
+        overlay.innerHTML = `
+            <div class="audio-enable-content">
+                <div class="audio-icon">🔊</div>
+                <h3>Enable Sound</h3>
+                <p>Tap to enable breathing tones</p>
+                <button class="btn-primary enable-sound-btn">Tap to Enable</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // Handle enable sound button click
+        overlay.querySelector('.enable-sound-btn').addEventListener('click', async () => {
+            markUserInteraction();
+            await initAudio();
+            overlay.classList.add('hidden');
+            // Restart breath tone if session is running
+            if (state.sessionState === 'running' && state.settings.sound) {
+                startBreathTone();
+            }
+        });
+        
+        // Also dismiss on any tap outside the button
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                markUserInteraction();
+                overlay.classList.add('hidden');
+            }
+        });
+    }
+    overlay.classList.remove('hidden');
 }
 
 function updateBreathTone(phase, progress) {
@@ -140,7 +219,7 @@ function init() {
 
 function setupServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('Service Worker registered'))
             .catch(err => console.error('Service Worker registration failed:', err));
     }
@@ -181,6 +260,7 @@ function loadState() {
 function setupNavigation() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            markUserInteraction();
             const target = btn.getAttribute('data-screen');
             if (target) showScreen(target);
         });
@@ -207,6 +287,7 @@ function setupOnboarding() {
     
     if (skipBtn) {
         skipBtn.addEventListener('click', () => {
+            markUserInteraction();
             const onboarding = document.getElementById('onboarding-screen');
             const home = document.getElementById('home-screen');
             if (onboarding) onboarding.classList.remove('active');
@@ -216,6 +297,7 @@ function setupOnboarding() {
     
     if (startBtn) {
         startBtn.addEventListener('click', () => {
+            markUserInteraction();
             const onboarding = document.getElementById('onboarding-screen');
             const home = document.getElementById('home-screen');
             if (onboarding) onboarding.classList.remove('active');
@@ -224,7 +306,10 @@ function setupOnboarding() {
     }
     
     dots.forEach((dot, index) => {
-        dot.addEventListener('click', () => goToSlide(index));
+        dot.addEventListener('click', () => {
+            markUserInteraction();
+            goToSlide(index);
+        });
     });
     
     // Swipe support
@@ -232,6 +317,7 @@ function setupOnboarding() {
     const onboardingSlides = document.querySelector('.onboarding-slides');
     if (onboardingSlides) {
         onboardingSlides.addEventListener('touchstart', (e) => {
+            markUserInteraction();
             touchStartX = e.touches[0].clientX;
         });
         
@@ -251,6 +337,8 @@ function setupOnboarding() {
 }
 
 function showScreen(screenName) {
+    const screens = getScreens();
+    
     // Remove active from all screens
     Object.values(screens).forEach(screen => {
         if (screen) {
@@ -276,7 +364,7 @@ function showScreen(screenName) {
     }
     
     // Scroll to top for new screens
-    const activeScreen = screens[screenName];
+    const activeScreen = getScreens()[screenName];
     if (activeScreen) {
         activeScreen.scrollTop = 0;
     }
@@ -301,17 +389,17 @@ async function startSession() {
     phaseTimer = 0;
     phaseStartTime = Date.now();
     
-    // Initialize and start audio (await to ensure it's ready)
-    if (state.settings.sound) {
-        await initAudio();
-        await startBreathTone();
-    }
-    
-    // Start timer
+    // Start timer first (doesn't require user gesture)
     sessionInterval = setInterval(() => {
         state.sessionTimer++;
         updateTimerDisplay();
     }, 1000);
+    
+    // Initialize and start audio (await to ensure it's ready)
+    // For iOS/Safari, this will show overlay if user hasn't interacted yet
+    if (state.settings.sound) {
+        await startBreathTone();
+    }
     
     // Start animation
     requestAnimationFrame(animateBreathing);
@@ -707,13 +795,27 @@ function updateStreak() {
 
 // ====== EVENT LISTENERS ======
 function setupEventListeners() {
+    // Global user interaction tracking for iOS audio unlock
+    // Capture on first interaction anywhere in the app
+    const interactionEvents = ['touchstart', 'click', 'pointerdown'];
+    const globalInteractionHandler = (e) => {
+        // Don't trigger for the audio enable overlay itself
+        if (e.target.closest('.audio-enable-overlay')) return;
+        markUserInteraction();
+    };
+    
+    interactionEvents.forEach(event => {
+        document.addEventListener(event, globalInteractionHandler, { once: true, passive: true });
+    });
+    
     // Home screen session buttons
     const quickBtn = document.getElementById('quick-session');
     const fullBtn = document.getElementById('full-session');
     const calibBtn = document.getElementById('calibration-session');
     
     if (quickBtn) {
-        quickBtn.addEventListener('click', () => {
+        quickBtn.addEventListener('click', async () => {
+            markUserInteraction();
             state.sessionDuration = 5 * 60;
             showScreen('session');
             setTimeout(() => startSession(), 100);
@@ -721,7 +823,8 @@ function setupEventListeners() {
     }
     
     if (fullBtn) {
-        fullBtn.addEventListener('click', () => {
+        fullBtn.addEventListener('click', async () => {
+            markUserInteraction();
             state.sessionDuration = 10 * 60;
             showScreen('session');
             setTimeout(() => startSession(), 100);
@@ -729,7 +832,8 @@ function setupEventListeners() {
     }
     
     if (calibBtn) {
-        calibBtn.addEventListener('click', () => {
+        calibBtn.addEventListener('click', async () => {
+            markUserInteraction();
             showScreen('session');
             setTimeout(() => startCalibration(), 100);
         });
@@ -741,10 +845,17 @@ function setupEventListeners() {
     const backBtn = document.getElementById('session-back');
     const soundBtn = document.getElementById('session-sound');
     
-    if (pauseBtn) pauseBtn.addEventListener('click', pauseSession);
-    if (endBtn) endBtn.addEventListener('click', endSession);
+    if (pauseBtn) pauseBtn.addEventListener('click', () => {
+        markUserInteraction();
+        pauseSession();
+    });
+    if (endBtn) endBtn.addEventListener('click', () => {
+        markUserInteraction();
+        endSession();
+    });
     if (backBtn) {
         backBtn.addEventListener('click', () => {
+            markUserInteraction();
             // Pause session if running, then go home
             if (state.sessionState === 'running') {
                 pauseSession();
@@ -754,7 +865,8 @@ function setupEventListeners() {
     }
     
     if (soundBtn) {
-        soundBtn.addEventListener('click', () => {
+        soundBtn.addEventListener('click', async () => {
+            markUserInteraction();
             state.settings.sound = !state.settings.sound;
             saveState();
             
@@ -767,7 +879,7 @@ function setupEventListeners() {
             // Start or stop audio based on new setting
             if (state.sessionState === 'running') {
                 if (state.settings.sound) {
-                    startBreathTone();
+                    await startBreathTone();
                 } else {
                     stopBreathTone();
                 }
@@ -779,15 +891,25 @@ function setupEventListeners() {
     const settingsBack = document.getElementById('settings-back');
     const settingsBtn = document.getElementById('settings-btn');
     
-    if (settingsBack) settingsBack.addEventListener('click', () => showScreen('home'));
-    if (settingsBtn) settingsBtn.addEventListener('click', () => showScreen('settings'));
+    if (settingsBack) settingsBack.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('home');
+    });
+    if (settingsBtn) settingsBtn.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('settings');
+    });
     
     // Complete screen controls
     const completeDone = document.getElementById('complete-done');
     const completeExtend = document.getElementById('complete-extend');
     
-    if (completeDone) completeDone.addEventListener('click', () => showScreen('home'));
-    if (completeExtend) completeExtend.addEventListener('click', () => {
+    if (completeDone) completeDone.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('home');
+    });
+    if (completeExtend) completeExtend.addEventListener('click', async () => {
+        markUserInteraction();
         state.sessionDuration += 300; // Add 5 minutes
         showScreen('session');
         setTimeout(() => startSession(), 100);
@@ -798,13 +920,25 @@ function setupEventListeners() {
     const startCalibrationBtn = document.getElementById('start-calibration');
     const calibrationDone = document.getElementById('calibration-done');
     
-    if (calibrationBack) calibrationBack.addEventListener('click', () => showScreen('home'));
-    if (startCalibrationBtn) startCalibrationBtn.addEventListener('click', startCalibration);
-    if (calibrationDone) calibrationDone.addEventListener('click', () => showScreen('home'));
+    if (calibrationBack) calibrationBack.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('home');
+    });
+    if (startCalibrationBtn) startCalibrationBtn.addEventListener('click', () => {
+        markUserInteraction();
+        startCalibration();
+    });
+    if (calibrationDone) calibrationDone.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('home');
+    });
     
     // Week detail screen back button
     const weekDetailBack = document.getElementById('week-detail-back');
-    if (weekDetailBack) weekDetailBack.addEventListener('click', () => showScreen('protocol'));
+    if (weekDetailBack) weekDetailBack.addEventListener('click', () => {
+        markUserInteraction();
+        showScreen('protocol');
+    });
     
     // Breath pattern sliders
     setupBreathPatternControls();
@@ -813,10 +947,15 @@ function setupEventListeners() {
     const soundToggle = document.getElementById('sound-toggle');
     if (soundToggle) {
         soundToggle.classList.toggle('active', state.settings.sound);
-        soundToggle.addEventListener('click', () => {
+        soundToggle.addEventListener('click', async () => {
+            markUserInteraction();
             state.settings.sound = !state.settings.sound;
             soundToggle.classList.toggle('active', state.settings.sound);
             saveState();
+            // Try to init audio if enabling sound
+            if (state.settings.sound) {
+                await initAudio();
+            }
         });
     }
 }
@@ -859,6 +998,7 @@ function setupBreathPatternControls() {
     // Calibration preset buttons (from book)
     document.querySelectorAll('[data-preset]').forEach(btn => {
         btn.addEventListener('click', () => {
+            markUserInteraction();
             const presetValue = btn.getAttribute('data-preset');
             const [inhale, exhale] = presetValue.split(',').map(parseFloat);
             
@@ -877,19 +1017,31 @@ function setupBreathPatternControls() {
     
     if (inhaleSlider) {
         inhaleSlider.value = state.breathPattern.inhale;
-        inhaleSlider.addEventListener('input', updateBreathPattern);
+        inhaleSlider.addEventListener('input', () => {
+            markUserInteraction();
+            updateBreathPattern();
+        });
     }
     if (exhaleSlider) {
         exhaleSlider.value = state.breathPattern.exhale;
-        exhaleSlider.addEventListener('input', updateBreathPattern);
+        exhaleSlider.addEventListener('input', () => {
+            markUserInteraction();
+            updateBreathPattern();
+        });
     }
     if (holdInSlider) {
         holdInSlider.value = state.breathPattern.inhaleHold;
-        holdInSlider.addEventListener('input', updateBreathPattern);
+        holdInSlider.addEventListener('input', () => {
+            markUserInteraction();
+            updateBreathPattern();
+        });
     }
     if (holdOutSlider) {
         holdOutSlider.value = state.breathPattern.exhaleHold;
-        holdOutSlider.addEventListener('input', updateBreathPattern);
+        holdOutSlider.addEventListener('input', () => {
+            markUserInteraction();
+            updateBreathPattern();
+        });
     }
     
     // Initialize display

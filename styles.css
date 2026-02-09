@@ -1822,3 +1822,92 @@ body {
 .hrv-insight strong {
     color: var(--accent-primary);
 }
+
+/* ========================================
+   Audio Enable Overlay (iOS Safari)
+   ======================================== */
+.audio-enable-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 22, 40, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.audio-enable-overlay.hidden {
+    display: none;
+}
+
+.audio-enable-content {
+    text-align: center;
+    padding: 40px 32px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--bg-elevated);
+    max-width: 320px;
+    margin: 20px;
+    animation: slideUp 0.4s ease;
+}
+
+.audio-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.audio-enable-content h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.audio-enable-content p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    line-height: 1.5;
+}
+
+.enable-sound-btn {
+    background: var(--accent-gradient);
+    color: #000;
+    border: none;
+    padding: 16px 32px;
+    border-radius: var(--radius-full);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    width: 100%;
+}
+
+.enable-sound-btn:active {
+    transform: scale(0.96);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
